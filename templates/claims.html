@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2>Insurance Claims</h2>
+  <table border="1" cellpadding="8">
+    <thead>
+      <tr>
+        <th>Claim ID</th>
+        <th>Risk Assessment ID</th>
+        <th>Status</th>
+        <th>Timestamp</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for claim in claims %}
+      <tr>
+        <td>{{ claim.id }}</td>
+        <td>{{ claim.risk_assessment_id }}</td>
+        <td>{{ claim.claim_status }}</td>
+        <td>{{ claim.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

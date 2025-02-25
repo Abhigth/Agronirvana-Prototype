@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Check Your Crop Insurance Risk</h2>
+    <form method="POST">
+        <label for="latitude">Latitude:</label>
+        <input type="text" id="latitude" name="latitude" placeholder="e.g., 19.0760" required>
+        <br>
+        <label for="longitude">Longitude:</label>
+        <input type="text" id="longitude" name="longitude" placeholder="e.g., 72.8777" required>
+        <br>
+        <button type="submit">Get Risk Data</button>
+    </form>
+
+    {% if weather %}
+        {% if weather.error %}
+            <p class="error">{{ weather.error }}</p>
+        {% else %}
+            <div class="weather-info">
+                <h3>Weather Data:</h3>
+                <p><strong>Temperature:</strong> {{ weather.main.temp }} °C</p>
+                <p><strong>Humidity:</strong> {{ weather.main.humidity }}%</p>
+                <p><strong>Condition:</strong> {{ weather.weather[0].description }}</p>
+                <p><strong>NDVI:</strong> {{ ndvi }}</p>
+                <p><strong>Risk Level:</strong> {{ risk }}</p>
+            </div>
+        {% endif %}
+    {% endif %}
+
+    <h3>Satellite Imagery:</h3>
+    {% if satellite_url %}
+        <img src="{{ satellite_url }}" alt="Satellite Imagery" width="500">
+    {% else %}
+        <p>Satellite imagery not available. (Using sample image)</p>
+        <img src="{{ url_for('static', filename='images/sample_satellite.jpg') }}" alt="Sample Satellite Imagery" width="500">
+    {% endif %}
+{% endblock %}

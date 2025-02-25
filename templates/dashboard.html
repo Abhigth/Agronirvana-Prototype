@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2>Risk Assessment Dashboard</h2>
+  <table border="1" cellpadding="8">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Latitude</th>
+        <th>Longitude</th>
+        <th>Temperature (°C)</th>
+        <th>Humidity (%)</th>
+        <th>NDVI</th>
+        <th>Risk Level</th>
+        <th>Timestamp</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for record in records %}
+      <tr>
+        <td>{{ record.id }}</td>
+        <td>{{ record.latitude }}</td>
+        <td>{{ record.longitude }}</td>
+        <td>{{ record.temperature }}</td>
+        <td>{{ record.humidity }}</td>
+        <td>{{ record.ndvi }}</td>
+        <td>{{ record.risk_level }}</td>
+        <td>{{ record.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

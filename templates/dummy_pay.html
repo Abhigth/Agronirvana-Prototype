@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2>Dummy Payment Simulation</h2>
+  <form method="POST">
+    <!-- You can simulate premium input if desired -->
+    <label for="premium">Enter Premium Amount (in INR):</label>
+    <input type="number" id="premium" name="premium" step="0.01" required>
+    <button type="submit">Simulate Payment</button>
+  </form>
+{% endblock %}

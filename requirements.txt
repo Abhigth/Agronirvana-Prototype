@@ -1,0 +1,9 @@
+Flask
+requests
+Flask-SQLAlchemy
+Flask-Login
+Flask-Mail
+Flask-Babel
+scikit-learn
+numpy
+gunicorn
