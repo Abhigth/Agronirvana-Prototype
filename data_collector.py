@@ -30,7 +30,7 @@ def fetch_and_store_weather():
 
 if __name__ == '__main__':
     scheduler = BackgroundScheduler()
-    scheduler.add_job(fetch_and_store_weather, 'interval', hours=1)  # Runs every hour
+    scheduler.add_job(fetch_and_store_weather, 'interval', hours=0.5)  # Runs every half-hour
     scheduler.start()
     
     try:
