@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block header %}
+<!-- Leave this block empty to remove the header on the home page -->
+{% endblock %}
+
+{% block content %}
+<video autoplay muted loop id="video-bg">
+  <source src=https://videos.pexels.com/video-files/15344215/15344215-uhd_2560_1440_30fps.mp4 type="video/mp4">
+  Your browser does not support HTML5 video.
+</video>
+<div class="container text-center mt-5">
+  <br><br><br><br><br><br><br><br>
+  <h1><span id="white-text">Welcome to Agro</span><span id="green-text">Nirvana</span></h1>
+  <p id="para">Please log in or register to continue.</p>
+  <a class="btn btn-primary m-2" href="{{ url_for('login') }}">Login</a>
+  <a class="btn btn-secondary m-2" href="{{ url_for('register') }}">Register</a>
+</div>
+
+<style>
+  #video-bg {
+            position: absolute;
+            top: 0px;
+            left: -150px;
+            min-width: 100%;
+            min-height: 100%;
+            z-index: -1;
+            filter: brightness(50%);
+        }
+  
+  #white-text {
+    color: aliceblue;
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+
+  }
+
+
+  #green-text {
+    color: rgb(53, 197, 0);
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+
+  }
+
+  #para {
+    color: aliceblue;
+  }
+
+</style>
+{% endblock %}

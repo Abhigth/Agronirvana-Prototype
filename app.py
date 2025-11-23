@@ -1,31 +1,28 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for, flash
 import requests
 from flask_sqlalchemy import SQLAlchemy
 import os
 from datetime import datetime, timedelta
 import random
-from flask import redirect, url_for, flash
 from werkzeug.security import generate_password_hash
 import pickle
 import numpy as np
 from flask_mail import Mail, Message
 from flask_babel import Babel, gettext as _
 
-
-
+# Flask-Login imports
+from flask_login import LoginManager, login_user, logout_user, current_user, login_required
 
 # Load the trained risk model
 with open("risk_model.pkl", "rb") as f:
     risk_model = pickle.load(f)
 
-
 basedir = os.path.abspath(os.path.dirname(__file__))
-
-
 
 app = Flask(__name__)
 app.secret_key = 'Agronv25'  # Replace with a unique, secure key
-# Configure the SQLite database (for simplicity)
+
+# Configure the SQLite database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'new_agronirvana.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -33,31 +30,26 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'test.agronirvana@gmail.com'       # Replace with your test email
-app.config['MAIL_PASSWORD'] = 'ieraqkqlsbnqamvb'          # Replace with your test email's password
-# Initialize the Mail instance
+app.config['MAIL_USERNAME'] = 'test.agronirvana@gmail.com'
+app.config['MAIL_PASSWORD'] = 'ieraqkqlsbnqamvb'
 mail = Mail(app)
 
 # Configure Babel
 app.config['BABEL_DEFAULT_LOCALE'] = 'en'
-app.config['BABEL_SUPPORTED_LOCALES'] = ['en', 'hi', 'te', 'kn']  # English, Hindi, Telugu, Kannada (for example)
+app.config['BABEL_SUPPORTED_LOCALES'] = ['en', 'hi', 'te', 'kn']
 babel = Babel(app)
 
-# Do not create a new instance; import the shared one instead.
-from flask_login import LoginManager, login_user, logout_user, current_user, login_required
-from models import db, RiskAssessment, User, Policy, Feedback, Claim  # Import User along with RiskAssessment
-
-# Initialize the shared SQLAlchemy instance (if not already done)
+# Initialize the shared SQLAlchemy instance
+from models import db, RiskAssessment, User, Policy, Feedback, Claim
 db.init_app(app)
 
 # Set up Flask-Login
 login_manager = LoginManager(app)
-login_manager.login_view = 'login'  # Redirect to 'login' route for unauthorized access
+login_manager.login_view = 'login'  # Redirect to /login for unauthorized users
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
-
 
 # Replace with your actual OpenWeatherMap API key
 WEATHER_API_KEY = '3401fdee3f9be8b96b31e1b7a84ec192'
@@ -71,90 +63,45 @@ def get_weather_data(lat, lon):
     else:
         return None
 
-
-
 def get_satellite_image(lat, lon, date):
-    nasa_api_key = "untLag6VYP4yBoASPLVOXrfdVyuYq8E6WtS66t6Q"  # Replace with your NASA API key
-    # NASA Earth API endpoint
+    nasa_api_key = "untLag6VYP4yBoASPLVOXrfdVyuYq8E6WtS66t6Q"
     url = f"https://api.nasa.gov/planetary/earth/assets?lon={lon}&lat={lat}&date={date}&dim=0.15&api_key={nasa_api_key}"
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
-        # Check if the API returns a URL for the satellite image
         if "url" in data:
             return data["url"]
     return None
 
-
 def get_ndvi(lat, lon):
-    """
-    Simulate NDVI value retrieval for the given coordinates.
-    In a real implementation, this function would process satellite imagery
-    to compute the NDVI value. Here, we return a random value between 0.2 and 0.8.
-    """
     return round(random.uniform(0.2, 0.8), 2)
 
-def assess_risk(weather_data, ndvi):
-    """
-    Compute a risk score based on weather data and NDVI.
-    The function returns a risk level as a string.
-    """
-    risk_score = 0
-
-    # Extract weather details
-    temp = weather_data.get('main', {}).get('temp', None)
-    humidity = weather_data.get('main', {}).get('humidity', None)
-    
-    if temp is not None:
-        # Example: For every degree above 35°C, add 1 point to risk.
-        if temp > 35:
-            risk_score += (temp - 35)
-    
-    if humidity is not None:
-        # Example: For humidity below 40%, add points for each percent below 40.
-        if humidity < 40:
-            risk_score += (40 - humidity)
-    
-    # Factor in NDVI (lower NDVI means higher risk)
-    if ndvi < 0.3:
-        risk_score += 10  # High risk added
-    elif ndvi < 0.5:
-        risk_score += 5   # Moderate risk added
-    else:
-        risk_score -= 2   # Good vegetation can slightly reduce risk
-
-    # Map the numerical risk_score to a risk level label
-    if risk_score > 15:
-        return "High Risk"
-    elif risk_score > 5:
-        return "Moderate Risk"
-    else:
-        return "Low Risk"
-    
-
 def assess_risk_advanced(weather_data, ndvi):
-    # Extract features: temperature, humidity, and NDVI
     temp = weather_data.get('main', {}).get('temp', 0)
     humidity = weather_data.get('main', {}).get('humidity', 0)
-    
-    # Create a features array; shape must be (1, 3)
     features = np.array([[temp, humidity, ndvi]])
-    
-    # Use the model to predict risk; 1 indicates High Risk, 0 indicates Low/Moderate Risk
     prediction = risk_model.predict(features)
-    
     if prediction[0] == 1:
         return "High Risk"
     else:
         return "Low/Moderate Risk"
 
+# ------------------------------
+# 1) NEW HOME ROUTE
+# ------------------------------
+@app.route('/')
+def home():
+    if current_user.is_authenticated:
+        return redirect(url_for('analysis'))
+    return render_template('home.html')  # Minimal page with login/register links
 
-
-
-# (Assuming get_weather_data, get_ndvi, and assess_risk are defined above)
-
-@app.route('/', methods=['GET', 'POST'])
-def index():
+# ------------------------------
+# 2) RENAMED INDEX -> ANALYSIS
+#    Protected by @login_required
+# ------------------------------
+@app.route('/analysis', methods=['GET', 'POST'])
+@login_required
+def analysis():
     weather_data = None
     risk_level = "Not Assessed"
     satellite_url = None  
@@ -167,10 +114,8 @@ def index():
         
         if weather_data:
             ndvi = get_ndvi(lat, lon)
-            risk_level = assess_risk_advanced(weather_data, ndvi)  # Use the advanced model function
-            risk_level = risk_level.strip().title()  # Normalize the string (e.g., "high risk" becomes "High Risk")
+            risk_level = assess_risk_advanced(weather_data, ndvi).strip().title()
     
-    # Log the risk assessment record to the database
             new_record = RiskAssessment(
                 latitude=lat,
                 longitude=lon,
@@ -183,26 +128,27 @@ def index():
             db.session.commit()
 
             if risk_level == "High Risk":
-                from models import Claim
                 new_claim = Claim(risk_assessment_id=new_record.id)
                 db.session.add(new_claim)
                 db.session.commit()
 
                 msg = Message("High Risk Alert - Claim Created",
-                      sender=app.config['MAIL_USERNAME'],
-                      recipients=[current_user.email])
-                msg.body = f"Dear {current_user.username},\n\nA high-risk assessment has been detected for your farm and a claim has been automatically created. Our team will review it shortly.\n\nThank you,\nAgroNirvana Team"
+                              sender=app.config['MAIL_USERNAME'],
+                              recipients=[current_user.email])
+                msg.body = (
+                    f"Dear {current_user.username},\n\n"
+                    "A high-risk assessment has been detected for your farm and a claim "
+                    "has been automatically created. Our team will review it shortly.\n\n"
+                    "Thank you,\nAgroNirvana Team"
+                )
                 mail.send(msg)
-
         else:
             weather_data = {"error": "Unable to fetch weather data."}
         
         default_date = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d")
         satellite_url = get_satellite_image(lat, lon, default_date)
     
-    return render_template('index.html', weather=weather_data, risk=risk_level, satellite_url=satellite_url, ndvi=ndvi)
-
-
+    return render_template('analysis.html', weather=weather_data, risk=risk_level, satellite_url=satellite_url, ndvi=ndvi)
 
 @app.route('/dashboard')
 @login_required
@@ -210,25 +156,23 @@ def dashboard():
     records = RiskAssessment.query.order_by(RiskAssessment.timestamp.desc()).all()
     return render_template('dashboard.html', records=records)
 
-
-
-from flask import redirect, url_for, flash
-from werkzeug.security import generate_password_hash
-
+# ------------------------------
+# Authentication Routes
+# ------------------------------
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('analysis'))
+
     if request.method == 'POST':
-        # Get form data
         username = request.form.get('username')
         email = request.form.get('email')
         password = request.form.get('password')
 
-        # Check if username or email already exists
         if User.query.filter((User.username == username) | (User.email == email)).first():
             flash("Username or email already exists.")
             return redirect(url_for('register'))
 
-        # Create new user
         new_user = User(username=username, email=email)
         new_user.set_password(password)
         db.session.add(new_user)
@@ -240,8 +184,10 @@ def register():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('analysis'))
+
     if request.method == 'POST':
-        # Get form data
         username = request.form.get('username')
         password = request.form.get('password')
 
@@ -249,7 +195,7 @@ def login():
         if user and user.check_password(password):
             login_user(user)
             flash("Logged in successfully.")
-            return redirect(url_for('dashboard'))  # Or wherever you want to redirect after login
+            return redirect(url_for('analysis'))
         else:
             flash("Invalid username or password.")
             return redirect(url_for('login'))
@@ -260,34 +206,31 @@ def login():
 def logout():
     logout_user()
     flash("You have been logged out.")
-    return redirect(url_for('index'))
+    return redirect(url_for('home'))
 
+# ------------------------------
+# Additional Routes
+# ------------------------------
 @app.route('/claims')
 def claims():
-    # Query all claims, ordered by most recent
-    from models import Claim  # Ensure Claim is imported
     claim_records = Claim.query.order_by(Claim.timestamp.desc()).all()
     return render_template('claims.html', claims=claim_records)
 
 @app.route('/policies')
-@login_required  # Only authenticated users can view their policies
+@login_required
 def policies():
-    # Retrieve policies associated with the current user
     user_policies = current_user.policies
     return render_template('policies.html', policies=user_policies)
-
 
 @app.route('/purchase_policy', methods=['GET', 'POST'])
 @login_required
 def purchase_policy():
     if request.method == 'POST':
-        # Retrieve form data for policy purchase
         coverage_amount = float(request.form.get('coverage_amount'))
         premium = float(request.form.get('premium'))
         effective_date = datetime.strptime(request.form.get('effective_date'), '%Y-%m-%d')
         expiry_date = datetime.strptime(request.form.get('expiry_date'), '%Y-%m-%d')
         
-        # For simplicity, generate a policy number (in a real app, use a better method)
         policy_number = "POL" + datetime.utcnow().strftime("%Y%m%d%H%M%S")
         
         new_policy = Policy(
@@ -305,16 +248,13 @@ def purchase_policy():
         return redirect(url_for('policies'))
     return render_template('purchase_policy.html')
 
-
 @app.route('/dummy_pay', methods=['GET', 'POST'])
 @login_required
 def dummy_pay():
     if request.method == 'POST':
-        # Simulate a successful payment
         flash("Payment simulated successfully!")
         return redirect(url_for('payment_success'))
     return render_template('dummy_pay.html')
-
 
 @app.route('/payment_success', methods=['GET', 'POST'])
 @login_required
@@ -322,27 +262,22 @@ def payment_success():
     flash("Your payment was successful! Your policy has been activated.")
     return redirect(url_for('policies'))
 
-
 @app.route('/feedback', methods=['GET', 'POST'])
 @login_required
 def feedback():
     if request.method == 'POST':
-        # Retrieve form data
         rating = request.form.get('rating')
         comments = request.form.get('comments')
         
-        # Validate that comments are provided and not just whitespace
         if not comments or comments.strip() == "":
             flash("Comments cannot be empty!")
             return redirect(url_for('feedback'))
         
-        # Attempt to convert the rating to an integer; if not provided or invalid, set to None
         try:
             rating = int(rating)
         except (ValueError, TypeError):
             rating = None
 
-        # Create and save a new feedback record
         new_feedback = Feedback(user_id=current_user.id, rating=rating, comments=comments.strip())
         db.session.add(new_feedback)
         try:
@@ -358,36 +293,28 @@ def feedback():
     
     return render_template('feedback.html')
 
-
-
 @app.route('/analytics')
 @login_required
 def analytics():
     total_assessments = RiskAssessment.query.count()
-    total_claims = Claim.query.count()  # Ensure Claim is imported
-    total_policies = Policy.query.count()  # If you have Policy implemented
+    total_claims = Claim.query.count()
+    total_policies = Policy.query.count()
     return render_template('analytics.html', 
                            total_assessments=total_assessments,
                            total_claims=total_claims,
                            total_policies=total_policies)
 
-
 @app.route('/feedback_analytics')
 @login_required
 def feedback_analytics():
-    # Query all feedback entries, ordered by the most recent
-    from models import Feedback  # Ensure Feedback is imported from models.py
     feedbacks = Feedback.query.order_by(Feedback.timestamp.desc()).all()
     return render_template('feedback_analytics.html', feedbacks=feedbacks)
 
-
 @app.route('/check_data')
 def check_data():
-    from models import HistoricalWeather  # Ensure the model is imported
+    from models import HistoricalWeather
     count = HistoricalWeather.query.count()
     return f"HistoricalWeather table has {count} records."
-
-
 
 if __name__ == '__main__':
     with app.app_context():

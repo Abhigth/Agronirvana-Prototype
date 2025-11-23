@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h2>Check Your Crop Insurance Risk</h2>
+    <h2 id="h2">Check Your Crop Insurance Risk</h2>
     <form method="POST">
         <label for="latitude">Latitude:</label>
         <input type="text" id="latitude" name="latitude" placeholder="e.g., 19.0760" required>
@@ -27,11 +27,38 @@
         {% endif %}
     {% endif %}
 
-    <h3>Satellite Imagery:</h3>
+    <h3 id="h3">Satellite Imagery:</h3>
     {% if satellite_url %}
         <img src="{{ satellite_url }}" alt="Satellite Imagery" width="500">
     {% else %}
-        <p>Satellite imagery not available. (Using sample image)</p>
-        <img src="{{ url_for('static', filename='images/sample_satellite.jpg') }}" alt="Sample Satellite Imagery" width="500">
+        <p id="p1">Enter the correct latitude and longitude to obtain the satelite imagery. (Using sample image)</p>
+        <img src="{{ url_for('static', filename='images/satelite img_fields.jpg') }}" alt="Sample Satellite Imagery" width="500" id="img1">
+        <style>
+            #video-bg {
+                      position: absolute;
+                      top: 0;
+                      left: 0;
+                      min-width: 100%;
+                      min-height: 100%;
+                      z-index: -1;
+                      filter: brightness(25%);
+                  }
+
+            #h2 {
+                color: rgb(0, 0, 0);
+            }
+
+            #h3 {
+                color: rgb(0, 0, 0);
+            }
+
+            #p1 {
+                color: rgb(0, 0, 0);
+            }
+
+            #img1 {
+                border: 2px solid #2e060648
+            }
+        </style>
     {% endif %}
 {% endblock %}
